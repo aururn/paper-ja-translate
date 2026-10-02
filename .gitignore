@@ -1,0 +1,5 @@
+# 論文のソース・訳文・PDF は commit しない
+work/
+*.pdf
+*.png
+__pycache__/
