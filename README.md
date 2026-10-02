@@ -48,11 +48,6 @@ bash scripts/build.sh work/2605.15583
 #   -> work/2605.15583/2605.15583_ja.pdf，2605.15583_en.pdf，compare/page-XX.png
 ```
 
-### Claude Code で訳す場合
-
-このリポジトリのディレクトリで Claude Code を起動し，次のように頼む．
-手順は `CLAUDE.md` と `TRANSLATION_GUIDE.md` に書いてある．
-
 ```
 arXiv 2605.15583 を日本語訳して
 ```
