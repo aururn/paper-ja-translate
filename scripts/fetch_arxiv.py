@@ -8,6 +8,7 @@
     work/<id>/src/        展開した LaTeX ソース
     work/<id>/meta.json   書誌情報とライセンス
 """
+
 import argparse
 import datetime
 import gzip
@@ -94,7 +95,9 @@ def extract_source(data, dest):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("arxiv_id", help="arXiv ID または abs/pdf の URL")
     ap.add_argument("--work", default="work", help="作業ディレクトリ（既定: work）")
     args = ap.parse_args()
@@ -103,8 +106,11 @@ def main():
     allowed, lic_name, lic_url = check_license(arxiv_id)
     print(f"[license] {arxiv_id}: {lic_name}")
     if not allowed:
-        print("このライセンスは翻訳（改変）を許していないため，処理を中止する．"
-              "全文訳ではなく要約などで対応すること．", file=sys.stderr)
+        print(
+            "このライセンスは翻訳（改変）を許していないため，処理を中止する．"
+            "全文訳ではなく要約などで対応すること．",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
     workdir = Path(args.work) / arxiv_id.replace("/", "_")
@@ -118,14 +124,18 @@ def main():
     workdir.mkdir(parents=True, exist_ok=True)
     extract_source(data, src)
 
-    meta.update({
-        "arxiv_id": arxiv_id,
-        "license": lic_name,
-        "license_url": lic_url,
-        "noncommercial": any(k in (lic_url or "") for k in ("/by-nc/", "/by-nc-sa/")),
-        "fetched": datetime.date.today().isoformat(),
-    })
-    (workdir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
+    meta.update(
+        {
+            "arxiv_id": arxiv_id,
+            "license": lic_name,
+            "license_url": lic_url,
+            "noncommercial": any(k in (lic_url or "") for k in ("/by-nc/", "/by-nc-sa/")),
+            "fetched": datetime.date.today().isoformat(),
+        }
+    )
+    (workdir / "meta.json").write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"[ok] {meta.get('title', '')}")
     print(f"[ok] ソースを {src} に展開した．")
     if meta["noncommercial"]:
