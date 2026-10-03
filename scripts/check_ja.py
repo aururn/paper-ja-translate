@@ -10,15 +10,18 @@
     3. 出典表記 \\JaTranslationNote が本文で使われているか
 問題があれば終了コード1を返す．
 """
+
 import argparse
 import re
 import sys
 from pathlib import Path
 
-KEEP_ARG_CMDS = r"(?:cite\w*|ref|eqref|cref|Cref|autoref|label|url|href|includegraphics|input|include|" \
-    r"bibliography\w*|begin|end|usepackage|documentclass|newcommand|renewcommand|def|hypersetup|" \
-    r"mathcal|mathrm|mathbf|mathbb|operatorname|text|textsc|texttt|color|textcolor|definecolor|" \
+KEEP_ARG_CMDS = (
+    r"(?:cite\w*|ref|eqref|cref|Cref|autoref|label|url|href|includegraphics|input|include|"
+    r"bibliography\w*|begin|end|usepackage|documentclass|newcommand|renewcommand|def|hypersetup|"
+    r"mathcal|mathrm|mathbf|mathbb|operatorname|text|textsc|texttt|color|textcolor|definecolor|"
     r"vspace|hspace|setlength|resizebox|multicolumn|multirow|cline|cmidrule|arraystretch)"
+)
 COUNTED = {
     "\\cite": re.compile(r"\\cite\w*\{([^}]*)\}"),
     "\\ref/\\eqref/\\cref": re.compile(r"\\(?:ref|eqref|cref|Cref|autoref)\{([^}]*)\}"),
@@ -27,12 +30,17 @@ COUNTED = {
     "数式環境": re.compile(r"\\begin\{(equation|align|gather|multline|eqnarray)\*?\}"),
     "インライン数式": re.compile(r"(?<!\\)\$[^$]+(?<!\\)\$"),
 }
-MATH_ENVS = re.compile(r"\\begin\{(equation|align|gather|multline|eqnarray|lstlisting|verbatim|algorithmic)\*?\}"
-                       r".*?\\end\{\1\*?\}", re.S)
+MATH_ENVS = re.compile(
+    r"\\begin\{(equation|align|gather|multline|eqnarray|lstlisting|verbatim|algorithmic)\*?\}"
+    r".*?\\end\{\1\*?\}",
+    re.S,
+)
 ENGLISH_RUN = re.compile(r"[A-Za-z][A-Za-z'\-]{1,}(?:[ ,;:()]+[A-Za-z][A-Za-z'\-]*){4,}")
 
 
-PROSE_MARKERS = re.compile(r"\\(section|subsection|paragraph|caption|item|begin\{(abstract|figure|table)|maketitle)\b")
+PROSE_MARKERS = re.compile(
+    r"\\(section|subsection|paragraph|caption|item|begin\{(abstract|figure|table)|maketitle)\b"
+)
 
 
 def has_prose(t):
@@ -54,13 +62,23 @@ def prose_only(t):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("workdir")
     ap.add_argument("--allow-english", type=int, default=0, help="許容する英文行の数（既定 0）")
     args = ap.parse_args()
     work = Path(args.workdir)
     src, ja = work / "src", work / "ja"
+    if not src.is_dir() or not ja.is_dir():
+        ap.error("作業ディレクトリには src/ と ja/ が必要．")
     problems = 0
+
+    for source in sorted(src.rglob("*.tex")):
+        rel = source.relative_to(src)
+        if not (ja / rel).is_file():
+            print(f"[missing] {rel}: 訳文ファイルが見つからない")
+            problems += 1
 
     english = []
     note_used = False
@@ -68,7 +86,7 @@ def main():
         if p.name == "ja_preamble.tex":
             continue
         rel = p.relative_to(ja)
-        t = p.read_text(errors="replace")
+        t = p.read_text(encoding="utf-8", errors="replace")
         if re.search(r"^[^%\n]*\\JaTranslationNote", t, re.M):
             note_used = True
         body = prose_only(t)
@@ -76,7 +94,7 @@ def main():
             body = ""
         doc = re.search(r"^[^%\n]*\\begin\{document\}", body, re.M)
         if doc:  # 主ファイルの preamble 部分は見ない（行番号は保つ）
-            body = "\n" * body[:doc.start()].count("\n") + body[doc.start():]
+            body = "\n" * body[: doc.start()].count("\n") + body[doc.start() :]
         for i, line in enumerate(body.splitlines(), 1):
             line = re.sub(r"（[^（）]*）", "", line)  # 用語に添えた英語は数えない
             if ENGLISH_RUN.search(line):
@@ -84,7 +102,8 @@ def main():
 
         sp = src / rel
         if sp.exists():
-            s_text, j_text = strip_comments(sp.read_text(errors="replace")), strip_comments(t)
+            s_text = strip_comments(sp.read_text(encoding="utf-8", errors="replace"))
+            j_text = strip_comments(t)
             for name, pat in COUNTED.items():
                 a, b = len(pat.findall(s_text)), len(pat.findall(j_text))
                 if a != b:
@@ -97,7 +116,9 @@ def main():
         if len(english) > args.allow_english:
             problems += 1
     if not note_used:
-        print("[note] \\JaTranslationNote が本文で使われていない（出典表記が必要）．著者欄か脚注に置くこと．")
+        print(
+            "[note] \\JaTranslationNote が本文で使われていない（出典表記が必要）．著者欄か脚注に置くこと．"
+        )
         problems += 1
 
     print("[ok] 問題なし" if problems == 0 else f"[ng] 確認が必要な項目: {problems}")

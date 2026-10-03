@@ -58,7 +58,7 @@ arXiv 2605.15583 を日本語訳して
 |---|---|
 | `scripts/fetch_arxiv.py` | arXiv の abs ページでライセンスを判定し，許される場合だけ e-print（LaTeX ソース）を取得・展開する．書誌情報を `meta.json` に保存する |
 | `scripts/prepare_ja.py` | `src/` を `ja/` にコピーする．主ファイルの `\documentclass` の直後に `\input{ja_engine}`（日本語組版のパッケージ．論文が既に読み込んでいれば入れない）を，`\begin{document}` の直前に `\input{ja_preamble}`（図・表・概要・参考文献の見出し名，cleveref の日本語書式，出典表記マクロ）を入れる．class / style ファイルに直書きされた `Fig.`，`TABLE`，`References`，`Abstract` を置き換え，置き換えきれない箇所を報告する |
-| `scripts/check_ja.py` | 英単語が5語以上続く行を英文の残りとして報告する．`\cite`，`\ref`，`\label`，`\includegraphics`，数式の個数をファイルごとに原文と比べる．`\JaTranslationNote` の有無を確認する |
+| `scripts/check_ja.py` | 訳文ファイルの欠落と，英単語が5語以上続く行を報告する．`\cite`，`\ref`，`\label`，`\includegraphics`，数式の個数をファイルごとに原文と比べる．`\JaTranslationNote` の有無を確認する |
 | `scripts/build.sh` | 原文と訳文を `latexmk` でコンパイルし，`compare_pages.py` で左右に並べた比較画像を作る |
 
 ## 限界
@@ -68,6 +68,16 @@ arXiv 2605.15583 を日本語訳して
 - LaTeX ソースが公開されていない論文には使えない．
 - class ファイルの作りによっては見出しの英語が残る．その場合は `prepare_ja.py` の `[check]` 出力の行を手で直す．
 - 訳文の品質は訳した人（またはモデル）による．非公式訳であり，正確さは原文で確認すること．
+
+## 開発時の検証
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+ネットワークや TeX 環境を使わず，文字のエスケープ，UTF-8 の読み書き，エンジンの選択，
+訳文ファイルの欠落検出を確認する．`prepare_ja.py --force` で入力が不正な場合は，既存の訳文を残す．
+CI は Windows と Linux で同じテストを実行する．
 
 ## ライセンス
 
