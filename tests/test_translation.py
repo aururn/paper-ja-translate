@@ -133,6 +133,55 @@ class TranslationTests(unittest.TestCase):
         self.assertFalse((self.ja / "old.txt").exists())
         self.assertTrue((self.ja / "main.tex").is_file())
 
+    def create_main_symlink(self, target):
+        link = self.src / "main.tex"
+        link.unlink()
+        try:
+            link.symlink_to(target)
+        except OSError as exc:
+            self.skipTest(f"Symlinks are unavailable: {exc}")
+
+    def assert_symlink_main_prepared(self, *args):
+        paper = self.src / "paper"
+        paper.mkdir()
+        (paper / "paper.tex").write_text(
+            MAIN.replace("日本語本文．", "\\input{sections/body}"), encoding="utf-8"
+        )
+        sections = self.src / "sections"
+        sections.mkdir()
+        (sections / "body.tex").write_text("本文．", encoding="utf-8")
+        self.create_main_symlink(Path("paper/paper.tex"))
+        result = self.run_script("prepare_ja.py", *args)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        info = json.loads((self.ja / ".ja_build.json").read_text(encoding="utf-8"))
+        self.assertEqual(info["main"], "main.tex")
+        self.assertIn("\\input{sections/body}", (self.ja / "main.tex").read_text(encoding="utf-8"))
+        self.assertTrue((self.ja / "sections/body.tex").is_file())
+        self.assertTrue((self.ja / "ja_engine.tex").is_file())
+        self.assertTrue((self.ja / "ja_preamble.tex").is_file())
+        self.assertNotIn("\\input{ja_engine}", (self.src / "main.tex").read_text(encoding="utf-8"))
+
+    def test_explicit_main_preserves_in_tree_symlink_path(self):
+        self.assert_symlink_main_prepared("--main", "main.tex")
+
+    def test_readme_main_preserves_in_tree_symlink_path(self):
+        (self.src / "00README.json").write_text(
+            json.dumps({"sources": [{"usage": "toplevel", "filename": "main.tex"}]}),
+            encoding="utf-8",
+        )
+        self.assert_symlink_main_prepared()
+
+    def test_outside_main_symlink_is_rejected_before_force_overwrite(self):
+        outside = self.work / "outside.tex"
+        outside.write_text(MAIN, encoding="utf-8")
+        self.create_main_symlink(outside)
+        self.ja.mkdir()
+        translated = self.ja / "main.tex"
+        translated.write_text("既存の訳文", encoding="utf-8")
+        result = self.run_script("prepare_ja.py", "--force", "--main", "main.tex")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(translated.read_text(encoding="utf-8"), "既存の訳文")
+
     def test_deleted_translated_file_is_reported(self):
         self.ja.mkdir()
         (self.ja / "main.tex").write_text(MAIN, encoding="utf-8")

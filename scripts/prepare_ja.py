@@ -13,6 +13,7 @@
 
 import argparse
 import json
+import os
 import re
 import shutil
 import sys
@@ -186,8 +187,11 @@ def main():
     src, ja = work / "src", work / "ja"
     meta = json.loads((work / "meta.json").read_text(encoding="utf-8"))
     # Validate inputs before replacing an existing translation with --force.
-    main_src = (src / args.main).resolve() if args.main else find_main_tex(src).resolve()
-    main_rel = main_src.relative_to(src.resolve())
+    selected_main = src / args.main if args.main else find_main_tex(src)
+    # Resolve links only for containment; preserve the selected compilation directory.
+    main_src = Path(os.path.abspath(selected_main))
+    main_src.resolve().relative_to(src.resolve())
+    main_rel = main_src.relative_to(Path(os.path.abspath(src)))
     original_text = main_src.read_text(encoding="utf-8", errors="replace")
     engine = args.engine or detect_engine(src, original_text)
     text, needs_engine = prepare_main_text(original_text)
