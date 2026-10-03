@@ -77,7 +77,6 @@ python -m unittest discover -s tests -v
 
 ネットワークや TeX 環境を使わず，文字のエスケープ，UTF-8 の読み書き，エンジンの選択，
 訳文ファイルの欠落検出を確認する．`prepare_ja.py --force` で入力が不正な場合は，既存の訳文を残す．
-CI は Windows と Linux で同じテストを実行する．
 
 ## ライセンス
 
